@@ -1,0 +1,15 @@
+# Docker関係
+.DS_Store
+db-store/
+
+# Laravel関係 (srcディレクトリ内を想定)
+src/.env
+src/vendor/
+src/node_modules/
+src/public/build/
+src/storage/*.key
+src/storage/logs/*.log
+
+# A5M2などのツールが生成する一時ファイル
+*.bak
+*.tmp
