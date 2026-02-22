@@ -1,0 +1,12 @@
+# / .gitignore
+
+# Laravel本体の除外（もしsrcに入れている場合）
+src/.env
+src/vendor/
+src/node_modules/
+src/public/storage
+src/public/hot
+
+# Docker関連
+.phpunit.result.cache
+.env
