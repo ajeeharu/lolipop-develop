@@ -154,7 +154,6 @@ lolipop-develop/
     ├── routes/
     ├── storage/               # 本番で書き込み権限が必要な場所
     ├── .env                   # ★PC開発用の環境設定（DB接続先など）
-    ├── tailwind.config.js     # Tailwindのカスタマイズ設定
     ├── vite.config.js         # Vite（JIT/ビルド）の設定
     └── package.json
 ```
@@ -317,16 +316,9 @@ docker compose exec app php artisan migrate
 docker-compose up -d
 ```
 ### 3. アクセス
-- http://localhost:8080  Laravel のスタート画面
-- http://localhost:8081  phpMyAdmin のDB管理画面
 
-### 3. Laravel プロジェクトの配置
-
-`src/` ディレクトリに Laravel プロジェクトを配置してください。
-
-### 4. アクセス
-
-- アプリケーション: http://localhost
+[Laravel のスタート画面](http://localhost:8080)  
+[phpMyAdmin のDB管理画面](http://localhost:8081) 
 
 ## よく使うコマンド
 
@@ -352,6 +344,48 @@ docker-compose down
 # 環境の完全削除（データベースも削除）
 docker-compose down -v
 ```
+
+### TailwindCSSの動作確認
+```bash
+```
+
+- ### TailwindCSS を含むすべての依存関係をダウンロード
+```bash
+docker compose exec app npm install
+```
+
+
+```bash
+# Dockerコンテナの中でTailwindの初期化コマンドを叩く
+docker compose exec app npx tailwindcss init -p
+```
+
+- ### src/resources/views/welcome.blade.phpの書き換え
+```bash
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tailwind Test</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="bg-white p-10 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-300">
+        <h1 class="text-4xl font-black text-blue-600 mb-4">
+            Tailwind CSS 動作確認！
+        </h1>
+        <p class="text-gray-600 text-lg">
+            この文字が青く、背景がグレーなら成功です。
+        </p>
+        <button class="mt-6 px-6 py-2 bg-pink-500 text-white font-bold rounded-full hover:bg-pink-600">
+            ロリポップへ一歩前進
+        </button>
+    </div>
+</body>
+</html>
+```
+
 
 ## 本番環境
 
