@@ -323,42 +323,76 @@ docker-compose up -d
 ## よく使うコマンド
 
 ```bash
+# コンテナをバックグラウンドで起動
+docker compose up -d
+
+# dockerfile を再反映
+docker compose up -d --build
+
+# DBマイグレーション
+docker compose exec app php artisan migrate
+
+# コントローラー作成
+docker compose exec app php artisan make:controller NameController
+
 # コンテナの状況確認
 docker-compose ps
 
 # ログの確認
-docker-compose logs -f
+docker compose logs -f
 
 # PHPコンテナに入る
-docker-compose exec app bash
+docker compose exec app bash
 
 # Composer実行
-docker-compose exec app composer install
+docker compose exec app composer install
 
 # Artisanコマンド実行
-docker-compose exec app php artisan migrate
+docker compose exec app php artisan migrate
 
 # 環境の停止
-docker-compose down
+docker compose down
 
 # 環境の完全削除（データベースも削除）
-docker-compose down -v
+docker compose down -v
 ```
 
-### TailwindCSSの動作確認
-```bash
-```
-
-- ### TailwindCSS を含むすべての依存関係をダウンロード
-```bash
-docker compose exec app npm install
-```
-
+### TailwindCSS (v4) の動作確認
 
 ```bash
 # Dockerコンテナの中でTailwindの初期化コマンドを叩く
 docker compose exec app npx tailwindcss init -p
 ```
+
+- ### src/vite.config.js をtailwindcssの動作を追加
+```bash
+import { defineConfig } from 'vite';
+import laravel from 'laravel-vite-plugin';
+import tailwindcss from '@tailwindcss/vite';
+
+export default defineConfig({
+    plugins: [
+        tailwindcss(),   // ここに追加されているか確認
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: true,
+        }),
+        tailwindcss(),
+    ],
+    server: {
+        watch: {
+            ignored: ['**/storage/framework/views/**'],
+        },
+    },
+});
+```
+
+- ### TailwindCSS v4 方式でビルド
+```bash
+docker compose exec app npm run build
+```
+
+## TailwindCSSの動作確認
 
 - ### src/resources/views/welcome.blade.phpの書き換え
 ```bash
@@ -385,64 +419,5 @@ docker compose exec app npx tailwindcss init -p
 </body>
 </html>
 ```
-
-
-## 本番環境
-
-本番環境では以下を想定：
-
-- Aurora MySQL（ローカルの MySQL は使用しないケースを想定）
-
-```bash
-# 本番環境での起動
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-```
-
-## ディレクトリ構成
-
-```
-.
-├── infra/
-│   ├── mysql/          # MySQL設定
-│   ├── nginx/          # nginx設定
-│   └── php/            # PHP設定
-├── src/                # Laravelプロジェクトを配置
-├── docker-compose.yml  # 開発環境設定
-├── docker-compose.prod.yml # 本番環境設定
-└── .env.example        # 環境変数テンプレート
-```
-
-## 注意事項
-
-- `src/` ディレクトリは空の状態です
-- 本番環境では CloudFront と ACM を使用することを推奨
-- データベースの永続化は `db-store` ボリュームで行われます
-
-## tailwind CSS ver4 を使用する場合
-
-vite.config.js を下記のコードで 5173 ポートを Docker のコンテナの外からもアクセスできるように開ける
-
-```js
-import { defineConfig } from "vite";
-import laravel from "laravel-vite-plugin";
-import tailwindcss from "@tailwindcss/vite";
-
-export default defineConfig({
-  plugins: [
-    laravel({
-      input: ["resources/css/app.css", "resources/js/app.js"],
-      refresh: true,
-    }),
-    tailwindcss(),
-  ],
-  server: {
-    host: "0.0.0.0",
-    port: 5173,
-    strictPort: true,
-    hmr: {
-      host: "localhost",
-      port: 5173,
-    },
-  },
-});
-```
+### 動作確認　
+[Tailwindcssの確認画面](http://localhost:8080)  
