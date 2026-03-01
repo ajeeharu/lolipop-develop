@@ -29,7 +29,6 @@ jobs:
         SERVER_PORT: ${{ secrets.SSH_PORT }}
         SERVER_IP: ${{ secrets.SSH_HOST }}
         USERNAME: ${{ secrets.SSH_USER }}
-        REMOTE_PORT: ${{ secrets.SSH_PORT }}
         # ロリポップ上のデプロイ先パス
         FOLDER: "./src/"
         SERVER_DEST: "/home/users/0/main.jp-web-server/web/study_space/laravel-test"
