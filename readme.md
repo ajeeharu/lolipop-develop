@@ -1,5 +1,49 @@
 # 開発環境
 - PHPフレームワークのLaravelを使用したWebアプリの開発環境を構築する。
+``` mermaid
+graph TB
+    subgraph "テナントA"
+        ClientA[クライアントA]
+    end
+    
+    subgraph "テナントB"
+        ClientB[クライアントB]
+    end
+    
+    subgraph "テナントC"
+        ClientC[クライアントC]
+    end
+    
+    subgraph "共通インフラ"
+        LB[Load Balancer]
+        
+        subgraph "アプリケーション層"
+            App1[App Server 1]
+            App2[App Server 2]
+        end
+        
+        subgraph "データ層（共有）"
+            DB[(Shared Database<br/>Row-Level Isolation)]
+            Cache[(Redis Cache)]
+        end
+    end
+    
+    ClientA --> LB
+    ClientB --> LB
+    ClientC --> LB
+    
+    LB --> App1
+    LB --> App2
+    
+    App1 --> DB
+    App2 --> DB
+    App1 --> Cache
+    App2 --> Cache
+    
+    style DB fill:#faa,stroke:#333,stroke-width:4px
+    style LB fill:#aaf,stroke:#333,stroke-width:2px
+```
+
 
 ## 本番サーバー構成（レンタルサーバー：Lolipop）
 
@@ -14,12 +58,14 @@
 - **目的**：次の項目に対応するために、本番環境と同等の開発環境をPC上で構築することを目的とする。
   - 本番環境との差異（OSや各ツールのVersion)で発生する、開発環境では再現できない不具合
   - 常に本番サーバー側で開発をおこなうと、作業のオーバーヘッド及び、コンフリクト（DB、修正箇所の競合）が発生
-  - PC上でのDebugの簡易
+  - PC上でのDebugを行うことでの
+  - 
 - **システム構成**：Windows11に下記のシステムを導入することにより、開発環境を構築していく
   - WSL2：Microsoftが提供する、Windows上でWindowsとLinux（Ubuntu）の両環境を同時に利用できる開発環境
   - Docker：アプリケーションの実行環境（ライブラリ、ツール、コードなど）を「コンテナ」という独立した単位にパッケージ化し、開発・テスト・本番など、どこでも同じ環境を高速・軽量に再現できるオープンソースの仮想化プラットフォーム であり、Linuxカーネルの機能を活用するコンテナ管理ツール
   - Docker Compose：複数のDockerコンテナで構成されるアプリケーションを、単一のYAMLファイル（compose.yaml）で定義・共有・一括操作（起動、停止、構築）できるツール
-- **開発ツール**：Editor、バージョン管理、JavaScript
+- **開発ツール**：Editor、バージョン管理、JavaScript、AI
+  - Laravel Boost： **Laravel 開発を AI で劇的に効率化するための公式ツール**
   - VSCODE：Microsoftが提供するEDITOR、整形、GIT等のプラグインが充実
   - TailwindCSS：機能単位（ユーティリティ）のクラスをHTMLに直接記述してデザインする、ユーティリティファーストのモダンなCSSフレームワーク
   - phpMyAdmin：Lolipopと同じMySQL用データベース管理ツール
@@ -141,12 +187,12 @@ lolipop-develop/
 │   └── php/
 │       ├── Dockerfile         # PHP 8.3 + Node.js + 各種拡張の導入
 │       └── php.ini            # ロリポップの制限に合わせたPHP設定
-└── src/                       # ★Laravel 12 本体（この中身を本番へ）
+└── src/                       # Dockerのコンテナ内にマウント
     ├── app/
     ├── bootstrap/
     ├── config/
     ├── database/
-    ├── public/                # ← ロリポップの「public_html」に対応
+    ├── public/                # ← Lolipopでの公開フォルダー
     │   ├── index.php
     │   ├── .htaccess          # ← セキュリティ設定を記述
     │   └── build/             # ← npm run build で生成される公開用ファイル
@@ -172,7 +218,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./src:/var/www/html
+      - ./src:/lolipo_container
       - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini
     networks:
@@ -192,7 +238,7 @@ services:
     networks:
       - lolipop-network
 
-  # ★ phpMyAdmin を追加
+  # phpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
@@ -228,7 +274,7 @@ RUN apt-get update && apt-get install -y \
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www/html
+WORKDIR /lolipop-container
 ```
 - ### docker/php/php.ini の作成 
 ```bash
@@ -243,9 +289,9 @@ mbstring.language = "Japanese"
 ```bash
 <VirtualHost *:80>
     # ロリポップの公開ディレクトリ構造に合わせた設定
-    DocumentRoot /var/www/html/public
+    DocumentRoot /lolipop-container/public
 
-    <Directory /var/www/html/public>
+    <Directory /lolipop-container/public>
         AllowOverride All
         Require all granted
     </Directory>
@@ -255,12 +301,15 @@ mbstring.language = "Japanese"
 </VirtualHost>
 ```
 
-- ### コンテナ関連の起動
+- ### Docker コンテナの起動
 
 ```bash
 # 1. コンテナのビルドと起動（初回は少し時間がかかります）
 docker compose up -d --build
 ```
+
+- ## Docker コンテナ内での開発環境をインストール
+
 - ### Laravelのインストール
 
 ```bash
@@ -280,84 +329,7 @@ docker compose exec app npm install
 docker compose exec app npm run build
 ```
 
-- ### src/.env のDataBase部分を変更
-
-```bash
-DB_CONNECTION=mysql
-DB_HOST=db
-DB_PORT=3306
-DB_DATABASE=laravel_db
-DB_USERNAME=loli_user
-DB_PASSWORD=root_password
-```
-
-
-- ### docker/php/php.ini の設定 (ロリポップ同等にするため)
-#### ロリポップの高速・大容量プランに近づける設定
-```bash
-[PHP]
-memory_limit = 512M ; LiteSpeed版の恩恵を受けるために少し多めに
-post_max_size = 100M
-upload_max_filesize = 100M
-date.timezone = "Asia/Tokyo"
-
-# PHP 8.4 用の最適化設定（任意）
-opcache.enable=1
-opcache.jit=tracing
-opcache.jit_buffer_size=128M
-```
-
-### 2. 開発環境の起動
-
-```bash
-# Databaseの初期化　(migrate)
-docker compose exec app php artisan migrate
-# docker の起動
-docker-compose up -d
-```
-### 3. アクセス
-
-[Laravel のスタート画面](http://localhost:8080)  
-[phpMyAdmin のDB管理画面](http://localhost:8081) 
-
-## よく使うコマンド
-
-```bash
-# コンテナをバックグラウンドで起動
-docker compose up -d
-
-# dockerfile を再反映
-docker compose up -d --build
-
-# DBマイグレーション
-docker compose exec app php artisan migrate
-
-# コントローラー作成
-docker compose exec app php artisan make:controller NameController
-
-# コンテナの状況確認
-docker-compose ps
-
-# ログの確認
-docker compose logs -f
-
-# PHPコンテナに入る
-docker compose exec app bash
-
-# Composer実行
-docker compose exec app composer install
-
-# Artisanコマンド実行
-docker compose exec app php artisan migrate
-
-# 環境の停止
-docker compose down
-
-# 環境の完全削除（データベースも削除）
-docker compose down -v
-```
-
-### TailwindCSS (v4) の動作確認
+### TailwindCSS (v4) のインストール
 
 ```bash
 # Dockerコンテナの中でTailwindの初期化コマンドを叩く
@@ -421,3 +393,127 @@ docker compose exec app npm run build
 ```
 ### 動作確認　
 [Tailwindcssの確認画面](http://localhost:8080)  
+
+### Laravel boostのインストール
+```bash
+docker compose exec  app composer require laravel/boost --dev
+```
+```bash
+docker compose exec app php artisan list | grep boost
+```
+### VS Codeとの連携
+- ### VS Codeでの設定(拡張機能のインストール)
+  次の拡張機能をインストールする。  
+1. Dev Containers(Microsoft公式)
+1. Laravel Extension Pack
+
+- ### VS Codeでの設定
+- ### Dockerコンテナとの接続
+  #### Dockerコンテナが起動していることを確認
+VS Codeの左下の「アイコン（><）」をクリックして
+実行中のコンテナから、起動中のコンテナを選択
+```bash
+# VS Codeのターミナルからの次のコマンドを入力
+php artisan boost:mcp
+```
+次のようなメッセージが表示される。
+```bash
+Which AI agents would you like to configure?
+# どのAIエージェントを選びますか？
+```
+無料枠が充実している Gemini CLI がお薦め
+
+[Google AI Studio](https://aistudio.google.com/)で作成したAPIキーを .env に追記してください。
+
+[Google AI Studio](https://aistudio.google.com/)で APIキー を取得します。
+
+### VS Codeで .env を開き、以下を追記します。
+
+```bash
+GEMINI_API_KEY=あなたのAPIキー
+```
+### Gemini CLI を起動して連携する
+VS Codeのターミナル（コンテナ接続済み）で、Gemini CLI本体をインストール
+```bash
+npm install -g @google/gemini-cli
+```
+VS Codeのターミナルで gemini コマンドを打ち、対話モードを開始
+```bash
+gemini
+```
+- ### src/.env のDataBase部分を変更
+
+```bash
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=laravel_db
+DB_USERNAME=loli_user
+DB_PASSWORD=root_password
+```
+
+
+- ### docker/php/php.ini の設定 (ロリポップ同等にするため)
+#### ロリポップの高速・大容量プランに近づける設定
+```bash
+[PHP]
+memory_limit = 512M ; LiteSpeed版の恩恵を受けるために少し多めに
+post_max_size = 100M
+upload_max_filesize = 100M
+date.timezone = "Asia/Tokyo"
+
+# PHP 8.4 用の最適化設定（任意）
+opcache.enable=1
+opcache.jit=tracing
+opcache.jit_buffer_size=128M
+```
+
+### 2. 開発環境の起動
+
+```bash
+# Databaseの初期化　(migrate)
+docker compose exec app php artisan migrate
+# docker の起動
+docker compose up -d
+```
+### 3. アクセス
+
+[Laravel のスタート画面](http://localhost:8080)  
+[phpMyAdmin のDB管理画面](http://localhost:8081) 
+
+## よく使うコマンド
+
+```bash
+# コンテナをバックグラウンドで起動
+docker compose up -d
+
+# dockerfile を再反映
+docker compose up -d --build
+
+# DBマイグレーション
+docker compose exec app php artisan migrate
+
+# コントローラー作成
+docker compose exec app php artisan make:controller NameController
+
+# コンテナの状況確認
+docker compose ps
+
+# ログの確認
+docker compose logs -f
+
+# PHPコンテナに入る
+docker compose exec app bash
+
+# Composer実行
+docker compose exec app composer install
+
+# Artisanコマンド実行
+docker compose exec app php artisan migrate
+
+# 環境の停止
+docker compose down
+
+# 環境の完全削除（データベースも削除）
+docker compose down -v
+```

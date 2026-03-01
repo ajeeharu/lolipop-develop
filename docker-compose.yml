@@ -7,7 +7,7 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./src:/var/www/html
+      - .:/lolipo_container
       - ./docker/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf
       - ./docker/php/php.ini:/usr/local/etc/php/php.ini
     networks:
@@ -27,7 +27,7 @@ services:
     networks:
       - lolipop-network
 
-  # ★ phpMyAdmin を追加
+  # phpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
     ports:
