@@ -53,6 +53,7 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         port: ${{ secrets.SSH_PORT }}
+        debug: true # これを追加してログを確認
         script: |
           cd /home/users/0/main.jp-web-server/web/study_space/laravel-test
           php artisan migrate --force
