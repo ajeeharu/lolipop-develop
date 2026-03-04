@@ -3,6 +3,7 @@ name: Deploy Laravel to Lolipop
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch: # これを追加！内容（インデント等）は空でOK
 
 jobs:
   deploy:
@@ -11,15 +12,25 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    # PHPのセットアップ（バージョンは自分の環境に合わせて変更してください）
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2' # ロリポップのバージョンに合わせる
+        php-version: '8.2'
+        extensions: mbstring, xml, ctype, iconv, mysql, zip
+        coverage: none
+
+    # Node.jsのセットアップ（Viteやnpm run build用）
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
 
     - name: Install Dependencies
       run: |
         composer install --no-dev --optimize-autoloader
-        npm install && npm run build # Vite等を使っている場合
+        npm install
+        npm run build
 
     - name: Deploy via rsync
       uses: AEnterprise/rsync-deploy@v1.0.2
