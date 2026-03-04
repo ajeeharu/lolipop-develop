@@ -43,7 +43,7 @@ jobs:
         USERNAME: ${{ secrets.SSH_USER }}
         # ロリポップ上のデプロイ先パス
         FOLDER: "./src/"
-        SERVER_DEST: "/home/users/0/main.jp-web-server/web/study_space/laravel-test"
+        SERVER_DESTINATION: "/home/users/0/main.jp-web-server/web/study_space/laravel-test"
 
     - name: Execute remote ssh commands
       uses: appleboy/ssh-action@v1.0.3
